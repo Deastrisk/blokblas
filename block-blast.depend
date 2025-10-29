@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1761698262 source:c:\programming\code-blocks\block-blast\main.cpp
+	<iostream>
+	<iomanip>
+
