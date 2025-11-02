@@ -28,53 +28,54 @@ void animateMenu() {
     };
 
     const int ANIMATION_DELAY_MS = 60;
-    int buff = 11;
+    int buff = 9;
     for (int i = BLOCK_BLAST[0].length(), len = i; i >= 0; i -= 5) {
         clear_screen();
         cout << "   _______________________________________________________________________________________________________________\n";
-        cout << "  /                                                                                                               \\\n";
-        cout << " /                                                                                                                 \\\n";
+        cout << "  /\\_______________________________________________________________________________________________________________\\\n";
+        cout << " /_/                                                                                                                \\\n";
         // print BLOCK BLAST dari array
         for (int j = 0, size = sizeof(BLOCK_BLAST) / sizeof(BLOCK_BLAST[0]); j < size; j++) {
-            cout << "|" << setw(len) << left << BLOCK_BLAST[j].substr(i) << setw(buff) << right << "|" << "\n";
+            cout << "| | " << setw(len) << left << BLOCK_BLAST[j].substr(i) << setw(buff) << right << "|" << "\n";
         }
         for (int i = 0; i < 5; i++) {
-            cout << "|" << setw(len + buff + 1) << right << "|\n";
+            cout << "| | " << setw(len + buff + 1) << right << "|\n";
         }
-        cout << "\\                                                                                                                  /\n";
-        cout << " \\________________________________________________________________________________________________________________/\n";
+        cout << "\\ \\                                                                                                                 /\n";
+        cout << " \\_\\_______________________________________________________________________________________________________________/\n";
         this_thread::sleep_for(chrono::milliseconds(ANIMATION_DELAY_MS));
     }
 
     for (int i = 0, len = BLOCK_BLAST[0].length(); i <= 5; i += 5) {
         clear_screen();
         cout << "   _______________________________________________________________________________________________________________\n";
-        cout << "  /                                                                                                               \\\n";
-        cout << " /                                                                                                                 \\\n";
+        cout << "  /\\_______________________________________________________________________________________________________________\\\n";
+        cout << " /_/                                                                                                                \\\n";
         // print BLOCK BLAST dari array
         for (int j = 0, size = sizeof(BLOCK_BLAST) / sizeof(BLOCK_BLAST[0]); j < size; j++) {
-            cout << "|" << setw(len + i) << right << BLOCK_BLAST[j] << setw(buff - i) << right << "|" << "\n";
+            cout << "| | " << setw(len + i) << right << BLOCK_BLAST[j] << setw(buff - i) << right << "|" << "\n";
         }
         for (int i = 0; i < 5; i++) {
-            cout << "|" << setw(len + buff + 1) << right << "|\n";
+            cout << "| | " << setw(len + buff + 1) << right << "|\n";
         }
-        cout << "\\                                                                                                                  /\n";
-        cout << " \\________________________________________________________________________________________________________________/\n";
+        cout << "\\ \\                                                                                                                 /\n";
+        cout << " \\_\\_______________________________________________________________________________________________________________/\n";
         this_thread::sleep_for(chrono::milliseconds(ANIMATION_DELAY_MS));
     }
 
     // buat sementara menu e gini dl
     // nti pikir ku sih di isi yg diatas
-    cout << "1. PLAY\n";
-    cout << "2. ENTAH ADA IDE APA\n";
-    cout << "3. ENTAH ADA IDE APA\n";
-    cout << "4. ENTAH ADA IDE APA\n";
-    cout << "5. ENTAH ADA IDE APA\n";
+    cout << "1. PLAY SOLO\n";
+    cout << "2. SURVIVAL MODE\n";
+    cout << "3. LEADERBOARD\n";
+    cout << "4. SHOP\n";
+    cout << "5. \n";
     cout << "0. EXIT\n";
 }
 
 int main()
 {
     animateMenu();
+    
     return 0;
 }
