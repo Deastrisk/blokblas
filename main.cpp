@@ -6,6 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <ctime>
+#include <conio.h>
 
 using namespace std;
 
@@ -56,21 +57,35 @@ void animateMenu() {
             cout << "| | " << setw(len + i) << right << BLOCK_BLAST[j] << setw(buff - i) << right << "|" << "\n";
         }
         for (int i = 0; i < 5; i++) {
-            cout << "| | " << setw(len + buff + 1) << right << "|\n";
+            if (i == 3) cout << "|" << setw((len + buff + 1)/2) << "START" << setw((len + buff + 1)/2) << right << "|\n";
+            else cout << "|" << setw(len + buff + 1) << right << "|\n";
         }
         cout << "\\ \\                                                                                                                 /\n";
         cout << " \\_\\_______________________________________________________________________________________________________________/\n";
         this_thread::sleep_for(chrono::milliseconds(ANIMATION_DELAY_MS));
     }
-
-    // buat sementara menu e gini dl
-    // nti pikir ku sih di isi yg diatas
-    cout << "1. PLAY SOLO\n";
-    cout << "2. SURVIVAL MODE\n";
-    cout << "3. LEADERBOARD\n";
-    cout << "4. SHOP\n";
-    cout << "5. \n";
-    cout << "0. EXIT\n";
+    char key = ' ';
+    key = getch();
+    if (key == 13) {system("cls"); start = true;}
+    while (start) {
+        bool menu = true, play = false;
+        while (menu) {
+            cout << "1. Play\n"
+                 << "2. Entah\n"
+                 << "3. Entah\n"
+                 << "4. Entah\n"
+                 << "0. Exit\n";
+            cin >> a;
+            if (a == 0) return 0;
+            else if (a == 1) play = true;
+            else if (a == 2) entah = true;
+            else if (a == 3) entah = true;
+            else if (a == 4) entah = true;
+        }
+        while (play) {
+            //kode nya
+        }
+    }
 }
 
 int main()
