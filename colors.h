@@ -20,9 +20,13 @@
 #define BG_CYAN         "\033[46m"
 #define BG_WHITE        "\033[47m"
 
-#define TXT_BOLD        "\033[1m"
-#define TXT_DIM         "\033[2m"
-#define TXT_ITALIC      "\033[3m"
-#define TXT_UNDERLINE   "\033[4m"
+#define TXT_BOLD          "\033[1m"
+#define TXT_DIM           "\033[2m"
+#define TXT_ITALIC        "\033[3m"
+#define TXT_UNDERLINE     "\033[4m"
+#define TXT_BLINKING      "\033[5m"
+#define TXT_INVERSE       "\033[7m"
+#define TXT_HIDDEN        "\033[8m"
+#define TXT_STRIKETHROUGH "\033[9m"
 
 #endif
