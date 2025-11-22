@@ -1,5 +1,7 @@
-#ifndef COLORS_H
-#define COLORS_H
+#ifndef COLORS_HPP
+#define COLORS_HPP
+
+#include <iostream>
 
 #define TXT_BLACK       "\033[30m"
 #define TXT_RED         "\033[31m"
@@ -32,5 +34,7 @@
 #define TXT_INVERSE       "\033[7m"
 #define TXT_HIDDEN        "\033[8m"
 #define TXT_STRIKETHROUGH "\033[9m"
+
+std::string txtToBg(const char* txt_color);
 
 #endif

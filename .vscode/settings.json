@@ -2,6 +2,10 @@
     "files.associations": {
         "string_view": "cpp",
         "iomanip": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "array": "cpp",
+        "initializer_list": "cpp",
+        "span": "cpp",
+        "type_traits": "cpp"
     }
 }
