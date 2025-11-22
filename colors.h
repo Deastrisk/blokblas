@@ -11,6 +11,10 @@
 #define TXT_WHITE       "\033[37m"
 #define TXT_RESET       "\033[0m"
 
+#define TXT_LIGHT_BLUE  "\033[38;5;123m"
+#define TXT_ORANGE      "\033[38;5;208m"
+#define TXT_LIME        "\033[38;5;155m"
+
 #define BG_BLACK        "\033[40m"
 #define BG_RED          "\033[41m"
 #define BG_GREEN        "\033[42m"
