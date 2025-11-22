@@ -12,12 +12,12 @@
 using namespace std;
 
 
-typedef enum {
+enum Page {
     MENU, CLASSIC, TEAM, LEADERBOARD, LOGIN, EXIT
-} Page;
+};
 
-typedef enum {
-        T0,       T1,       T2,      T3,
+enum PIECES {
+        T1,       T2,       T3,      T4,
     // ##    |          |    ## | ## ## ##
     // ## ## |    ##    | ## ## |    ##
     // ##    | ## ## ## |    ## | 
@@ -27,9 +27,9 @@ typedef enum {
     // ##    |       ## |    ## | ##
     // ## ## | ## ## ## |    ## | 
         LM1,      LM2,     LM3,      LM4,
-    //    ## |          | ## ## | ## ## ##
-    //    ## | ##       | ##    |       ##
-    // ## ## | ## ## ## | ##    | 
+    //    ## | ## ## ## | ## ## | 
+    //    ## |       ## | ##    | ##      
+    // ## ## |          | ##    | ## ## ##
 
        I2,  I3,  I4,  I5,
     // ## | ## | ## | ##
@@ -52,26 +52,221 @@ typedef enum {
     // ## ## | 
 
          LL1,       LL2,       LL3,       LL4,
-    // ## ## ## | ## ## ## |       ## | ##
-    // ##       |       ## |       ## | ##
-    // ##       |       ## | ## ## ## | ## ## ##
+    // ## ## ## | ##       |       ## | ## ## ##
+    // ##       | ##       |       ## |       ##
+    // ##       | ## ## ## | ## ## ## |       ##
 
-      SPECIAL
-    //    ##
-    // ##
-} PIECES;
+    SPECIAL1, SPECIAL2,
+    //    ## | ##
+    // ##    |    ##
 
-typedef struct {
+       SPECIAL3,  SPECIAL4
+    //       ## | ##
+    //    ##    |    ##
+    // ##       |       ##
+};
+
+struct User {
     int uid = 0;
     string name = "Guest";
     long long int highest_score = 0;
     long long int current_score = 0;
-} User;
+};
 
-typedef struct {
+struct Cell {
     bool active = false;
-    string color = TXT_RED;
-} Cell;
+    const char* color = TXT_RED;
+
+    Cell() = default;
+    Cell(bool active, const char* color) : active(active), color(color) {}
+};
+
+vector<vector<vector<Cell>>> pieces = {
+    // T1
+    {
+        {Cell(true, TXT_GREEN)},
+        {Cell(true, TXT_GREEN),   Cell(true, TXT_GREEN)},
+        {Cell(true, TXT_GREEN)}
+    },
+    // T2
+    {
+        {Cell(false, TXT_GREEN),  Cell(true, TXT_GREEN)},
+        {Cell(true, TXT_GREEN),   Cell(true, TXT_GREEN), Cell(true, TXT_GREEN)},
+    },
+    // T3
+    {
+        {Cell(false, TXT_GREEN),  Cell(true, TXT_GREEN)},
+        {Cell(true, TXT_GREEN),   Cell(true, TXT_GREEN)},
+        {Cell(false, TXT_GREEN),  Cell(true, TXT_GREEN)},
+    },
+    // T4
+    {
+        {Cell(true, TXT_GREEN),   Cell(true, TXT_GREEN),    Cell(true, TXT_GREEN)},
+        {Cell(false, TXT_GREEN),  Cell(true, TXT_GREEN)},
+    },
+
+    // L1
+    {
+        {Cell(true, TXT_LIGHT_BLUE)},
+        {Cell(true, TXT_LIGHT_BLUE)},
+        {Cell(true, TXT_LIGHT_BLUE),  Cell(true, TXT_LIGHT_BLUE)},
+    },
+    // L2
+    {
+        {Cell(false, TXT_LIGHT_BLUE), Cell(false, TXT_LIGHT_BLUE),  Cell(true, TXT_LIGHT_BLUE)},
+        {Cell(true, TXT_LIGHT_BLUE),  Cell(true, TXT_LIGHT_BLUE),   Cell(true, TXT_LIGHT_BLUE)},
+    },
+    // L3
+    {
+        {Cell(true, TXT_LIGHT_BLUE),  Cell(true, TXT_LIGHT_BLUE)},
+        {Cell(false, TXT_LIGHT_BLUE), Cell(true, TXT_LIGHT_BLUE)},
+        {Cell(false, TXT_LIGHT_BLUE), Cell(true, TXT_LIGHT_BLUE)},
+    },
+    // L4
+    {
+        {Cell(true, TXT_LIGHT_BLUE),  Cell(true, TXT_LIGHT_BLUE),   Cell(true, TXT_LIGHT_BLUE)},
+        {Cell(true, TXT_LIGHT_BLUE)},
+    },
+
+    // LM1
+    {
+        {Cell(false, TXT_ORANGE), Cell(true, TXT_ORANGE)},
+        {Cell(false, TXT_ORANGE), Cell(true, TXT_ORANGE)},
+        {Cell(true, TXT_ORANGE),  Cell(true, TXT_ORANGE)},
+    },
+    // LM2
+    {
+        {Cell(true, TXT_ORANGE),  Cell(true, TXT_ORANGE),   Cell(true, TXT_ORANGE)},
+        {Cell(false, TXT_ORANGE),  Cell(false, TXT_ORANGE),  Cell(true, TXT_ORANGE)},
+    },
+    // LM3
+    {
+        {Cell(true, TXT_ORANGE),  Cell(true, TXT_ORANGE)},
+        {Cell(true, TXT_ORANGE)},
+        {Cell(true, TXT_ORANGE)},
+    },
+    // LM4
+    {
+        {Cell(true, TXT_ORANGE),  Cell(false, TXT_ORANGE),  Cell(false, TXT_ORANGE)},
+        {Cell(true, TXT_ORANGE),  Cell(true, TXT_ORANGE),   Cell(true, TXT_ORANGE)},
+    },
+
+    // I2
+    {
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+    },
+    // I3
+    {
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+    },
+    // I4
+    {
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+    },
+    // I5
+    {
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+        {Cell(true, TXT_YELLOW)},
+    },
+
+    // IH2
+    {
+        {Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW)},
+    },
+    // IH3
+    {
+        {Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW)},
+    },
+    // IH4
+    {
+        {Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW)},
+    },
+    // IH5
+    {
+        {Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW), Cell(true, TXT_YELLOW)},
+    },
+
+    // O2
+    {
+        {Cell(true, TXT_RED),   Cell(true, TXT_RED)},
+        {Cell(true, TXT_RED),   Cell(true, TXT_RED)},
+    },
+    // O3
+    {
+        {Cell(true, TXT_RED),   Cell(true, TXT_RED),    Cell(true, TXT_RED)},
+        {Cell(true, TXT_RED),   Cell(true, TXT_RED),    Cell(true, TXT_RED)},
+        {Cell(true, TXT_RED),   Cell(true, TXT_RED),    Cell(true, TXT_RED)},
+    },
+
+    // R2x3
+    {
+        {Cell(true, TXT_BLUE),   Cell(true, TXT_BLUE)},
+        {Cell(true, TXT_BLUE),   Cell(true, TXT_BLUE)},
+        {Cell(true, TXT_BLUE),   Cell(true, TXT_BLUE)},
+    },
+    // R3x2
+    {
+        {Cell(true, TXT_BLUE),   Cell(true, TXT_BLUE),    Cell(true, TXT_BLUE)},
+        {Cell(true, TXT_BLUE),   Cell(true, TXT_BLUE),    Cell(true, TXT_BLUE)},
+    },
+
+    // LL1
+    {
+        {Cell(true, TXT_MAGENTA),   Cell(true, TXT_MAGENTA),    Cell(true, TXT_MAGENTA)},
+        {Cell(true, TXT_MAGENTA)},
+        {Cell(true, TXT_MAGENTA)},
+    },
+    // LL2
+    {
+        {Cell(true, TXT_MAGENTA)},
+        {Cell(true, TXT_MAGENTA)},
+        {Cell(true, TXT_MAGENTA),   Cell(true, TXT_MAGENTA),    Cell(true, TXT_MAGENTA)},
+    },
+    // LL3
+    {
+        {Cell(false, TXT_MAGENTA),  Cell(false, TXT_MAGENTA),   Cell(true, TXT_MAGENTA)},
+        {Cell(false, TXT_MAGENTA),  Cell(false, TXT_MAGENTA),   Cell(true, TXT_MAGENTA)},
+        {Cell(true, TXT_MAGENTA),   Cell(true, TXT_MAGENTA),    Cell(true, TXT_MAGENTA)},
+    },
+    // LL4
+    {
+        {Cell(true, TXT_MAGENTA),   Cell(true, TXT_MAGENTA),    Cell(true, TXT_MAGENTA)},
+        {Cell(false, TXT_MAGENTA),  Cell(false, TXT_MAGENTA),   Cell(true, TXT_MAGENTA)},
+        {Cell(false, TXT_MAGENTA),  Cell(false, TXT_MAGENTA),   Cell(true, TXT_MAGENTA)},
+    },
+
+    // SPECIAL1
+    {
+        {Cell(false, TXT_CYAN), Cell(true, TXT_CYAN)},
+        {Cell(true, TXT_CYAN)},
+    },
+    // SPECIAL2
+    {
+        {Cell(true, TXT_CYAN)},
+        {Cell(false, TXT_CYAN), Cell(true, TXT_CYAN)},
+    },
+    // SPECIAL3
+    {
+        {Cell(false, TXT_LIME), Cell(false, TXT_LIME), Cell(true, TXT_LIME)},
+        {Cell(false, TXT_LIME), Cell(true, TXT_LIME)},
+        {Cell(true, TXT_LIME)},
+    },
+    // SPECIAL4
+    {
+        {Cell(true, TXT_LIME)},
+        {Cell(false, TXT_LIME), Cell(true, TXT_LIME)},
+        {Cell(false, TXT_LIME), Cell(false, TXT_LIME), Cell(true, TXT_LIME)},
+    },
+};
 
 Page page = MENU;
 
@@ -402,6 +597,14 @@ void mainMenu() {
 
 
 // ======== GAME KLASIK (GAME BIASA) Marcio ==========
+void movePiece(vector<vector<Cell>> board, char move) {
+    return;
+}
+
+void addPiece(vector<vector<Cell>> board) {
+    return;
+}
+
 int classic(int uid) {
     hideCursor();
 
@@ -475,6 +678,20 @@ int classic(int uid) {
 
         Sleep(800);
         if (getch()) break;
+    }
+
+    for (int type = 0; type < pieces.size(); type++) {
+        for (int i = 0; i < pieces[type].size(); i++) {
+            for (int j = 0; j < pieces[type][i].size(); j++) {
+                if (pieces[type][i][j].active) {
+                    cout << pieces[type][i][j].color << "## ";
+                } else {
+                    cout << "-- ";
+                }
+            }
+            cout << "\n";
+        }
+        cout << "\n";
     }
 
     cout << string(TXT_RESET);
