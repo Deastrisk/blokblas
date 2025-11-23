@@ -6,6 +6,14 @@
         "array": "cpp",
         "initializer_list": "cpp",
         "span": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "charconv": "cpp",
+        "compare": "cpp",
+        "functional": "cpp",
+        "ratio": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "variant": "cpp",
+        "ostream": "cpp"
     }
 }

@@ -72,7 +72,7 @@ enum PIECES {
     //    ##    |    ##
     // ##       |       ##
 
-    LAST_PIECE // not an actual piece; only for piece count
+    LAST_PIECE // not an actual piece
 };
 
 
@@ -85,10 +85,15 @@ struct User {
 
 struct Cell {
     bool active = false;
-    const char* color = TXT_HIDDEN;
+    string color = TXT_HIDDEN;
 
     Cell() = default;
-    Cell(bool active, const char* color) : active(active), color(color) {}
+    Cell(bool active, string color) : active(active), color(color) {}
+};
+
+struct ActivePiece {
+    bool active;
+    PIECES type;
 };
 
 
@@ -682,7 +687,7 @@ bool isPlaceable(
     return true;
 }
 
-void placeablePieces(const vector<vector<Cell>>& board, vector<PIECES>& placeable_pieces) {
+void placeablePieces(const vector<vector<Cell>>& board, vector<ActivePiece>& placeable_pieces) {
     // list of all potentially placeable pieces
     vector<PIECES> placeables = {
         T1, T2, T3, T4,
@@ -711,7 +716,7 @@ void placeablePieces(const vector<vector<Cell>>& board, vector<PIECES>& placeabl
 
                 // save placeable pieces
                 if (isPlaceable(board, selected, j, i)) {
-                    placeable_pieces.push_back(selected);
+                    placeable_pieces.push_back({.active = false, .type = selected});
                 }
 
                 // erase placeable piece candidates after check
@@ -724,19 +729,6 @@ void placeablePieces(const vector<vector<Cell>>& board, vector<PIECES>& placeabl
         }
     }
 
-    return;
-}
-
-void removeMoveablePiece(vector<vector<bool>>& board) {
-    for (int i = 0; i < board.size(); i++) {
-        for (int j = 0; j < board[i].size(); j++) {
-            if (board[i][j]) board[i][j] = false;
-        }
-    }
-}
-
-void switchPiece(vector<vector<bool>> board, const unsigned char& inp, vector<PIECES> type) {
-    
     return;
 }
 
@@ -799,18 +791,37 @@ bool isPlaceable(const vector<vector<bool>>& moveable, const vector<vector<Cell>
     return true;
 }
 
-void placePiece(vector<vector<bool>>& moveable, vector<vector<Cell>>& board, const char* color) {
+void removeMoveablePiece(vector<vector<bool>>& board) {
+    for (int i = 0; i < board.size(); i++) {
+        for (int j = 0; j < board[i].size(); j++) {
+            if (board[i][j]) board[i][j] = false;
+        }
+    }
+}
+
+void placePiece(
+    vector<vector<bool>>& moveable, 
+    vector<vector<Cell>>& board, 
+    string color, 
+    vector<ActivePiece>& piece_list
+) {
     for (int i = 0; i < moveable.size(); i++) {
         for (int j = 0; j < moveable[0].size(); j++) {
             if (!moveable[i][j]) continue;
+
+            // pieces cells
             moveable[i][j] = false;
             board[i][j].active = true;
             board[i][j].color = color;
         }
     }
+
+    for (int i = 0; i < piece_list.size(); i++) {
+        piece_list[i].active = false;
+    }
 }
 
-void printPiecesList(vector<PIECES> types) {
+void printPiecesList(const vector<ActivePiece>& piece_list) {
     // top border
     cout << u8"╔";
     for (int i = 0, len = 5; i < len; i++) {
@@ -833,24 +844,32 @@ void printPiecesList(vector<PIECES> types) {
             }
 
             for (int j = 0; j < MAX_PIECE_WIDTH; j++) {
-                if (i >= pieces[types[type]].size()) {
+                // more than piece height
+                if (i >= pieces[piece_list[type].type].size()) {
                     cout << "  ";
                     continue;
                 }
 
-                if (j >= pieces[types[type]][i].size()) {
+                // more than piece width
+                if (j >= pieces[piece_list[type].type][i].size()) {
                     cout << "  ";
                     continue;
                 }
 
                 // skip if piece cell nonactive
-                if (!pieces[types[type]][i][j].active) {
+                if (!pieces[piece_list[type].type][i][j].active) {
+                    cout << "  ";
+                    continue;
+                }
+
+                // skip if piece is currently used
+                if (piece_list[type].active) {
                     cout << "  ";
                     continue;
                 }
 
                 // print colored cell
-                cout << pieces[types[type]][i][j].color << u8"██" << TXT_RESET;
+                cout << pieces[piece_list[type].type][i][j].color << u8"██" << TXT_RESET;
                 // cout << u8"██";
             }
             type++;
@@ -869,7 +888,166 @@ void printPiecesList(vector<PIECES> types) {
     cout << u8"╝\n";
 }
 
-void selectPiece();
+int isAddable(
+    const vector<vector<bool>>& board,
+    const PIECES& piece, 
+    int start_x, 
+    int start_y
+) {
+    // out of range (OOR)
+    const int OOR_RIGHT = 2;
+    const int OOR_LEFT = -2; // would never happen
+    const int OOR_BOTTOM = 1;
+    const int OOR_TOP = -1; // would never happen
+
+    // piece is out of range bottom
+    if (start_y >= board.size() - pieces[piece].size()) {
+        return OOR_BOTTOM;
+    }
+
+    // piece is out of range TOP
+    if (start_y < 0) return OOR_TOP;
+
+    // piece is out of range left
+    if (start_x < 0) return OOR_LEFT;
+
+    // loops through the piece array
+    for (int y = 0; y < pieces[piece].size(); y++) {
+        // piece is out of range right
+        if (start_x >= board[y].size() - pieces[piece][y].size()) {
+            return OOR_RIGHT;
+        }
+    }
+
+    // all checks passed
+    return 0;
+}
+
+void centerPiece(const vector<vector<bool>>& moveable, const PIECES& type, int& x, int& y){
+    y = (moveable.size() - pieces[type].size()) / 2;
+    int max_width = 0;
+    for (int i = 0; i < pieces[type].size(); i++) {
+        if (pieces[type][i].size() > max_width) max_width = pieces[type][i].size();
+    }
+    x = (moveable[0].size() - max_width) / 2;
+}
+
+bool addPiece(
+    vector<vector<bool>>& moveable,
+    const PIECES& type,
+    int x,
+    int y
+) {
+    const int OOR_RIGHT = 2;
+    const int OOR_BOTTOM = 1;
+    const int OOR_TOP = -1;
+    const int OOR_LEFT = -2;
+
+    // move piece if isn't addable
+    while (true) {
+        int isaddable = isAddable(moveable, type, x, y);
+        // cout << " addPiece(4)(1): "<< x << "," << y << ";" << isaddable << endl;
+        if (!isaddable) break;
+        if (isaddable == OOR_RIGHT) x--;
+        if (isaddable == OOR_BOTTOM) y--;
+
+        // piece is too large
+        if (isaddable == OOR_LEFT) {
+            // cout << "OOR LEFT" << endl;
+            return false;
+        }
+        if (isaddable == OOR_TOP) {
+            // cout << "OOR TOP" << endl;
+            return false;
+        }
+    }
+
+    // adds piece to moveable
+    for (int i = 0; i < pieces[type].size(); i++) {
+        for (int j = 0; j < pieces[type][i].size(); j++) {
+            if (!pieces[type][i][j].active) continue;
+            
+            // adds active piece cells to moveable
+            moveable[i + y][j + x] = pieces[type][i][j].active;
+        }
+    }
+    // cout << "addPiece(4)(2): " << type << "\n";
+
+    return true;
+}
+
+bool addPiece(vector<vector<bool>>& moveable, const PIECES& type) {
+    int centery, centerx;
+    centerPiece(moveable, type, centerx, centery);
+    if (!addPiece(moveable, type, centerx, centery)) return false;
+    // cout << " addpiece(2): " << centerx << "," << centery << endl;
+    return true;
+}
+
+void getTopLeft(const vector<vector<bool>>& moveable, int& x, int& y) {
+    int miny = moveable.size();
+    int minx = moveable[0].size();
+    // uppermost y
+    for (int i = 0; i < moveable.size(); i++) {
+        for (int j = 0; j < moveable[0].size(); j++) {
+            // cell isn't active
+            if (!moveable[i][j]) continue;
+
+            // gets miny and minx
+            if (i >= miny && j >= minx) continue;
+            if (i < miny) miny = i;
+            if (j < minx) minx = j;
+            // cout << int(minx) << "," << int(miny);
+        }
+    }
+
+    x = minx;
+    y = miny;
+}
+
+void switchPiece(vector<vector<bool>>& moveable, const unsigned char& inp, vector<ActivePiece>& piece_list, string& color) {
+    int next_piece_id = inp - '1';
+    PIECES next_piece = piece_list[next_piece_id].type;
+    PIECES current_piece;
+    const int NO_ACTIVE_PIECE = -1;
+    int current_piece_id = NO_ACTIVE_PIECE;
+    // gets currently used piece
+    for (int i = 0; i < piece_list.size(); i++) {
+        if (piece_list[i].active) {
+            current_piece = piece_list[i].type;
+            // cout << current_piece;
+            current_piece_id = i;
+            break;
+        }
+    }
+    
+    // current piece is the same as next piece
+    if (current_piece_id == next_piece_id) return;
+    
+    // there are no active pieces in moveable board
+    if (current_piece_id == NO_ACTIVE_PIECE) {
+        removeMoveablePiece(moveable);
+        addPiece(moveable, next_piece);
+        color = pieces[piece_list[next_piece_id].type][0][0].color;
+        // cout << "switchPiece:" << int(inp) << "," << next_piece_id << ", " << piece_list[next_piece_id].active << endl;
+        piece_list[next_piece_id].active = false;
+        return;
+    }
+
+    // get the top-leftmost of the movable piece X
+    int minx = 0, miny = 0;
+    getTopLeft(moveable, minx, miny);
+ 
+    // current piece unused, next piece in use X
+    piece_list[current_piece_id].active = false;
+    piece_list[next_piece_id].active = true;
+
+    // switch piece in moveable board V
+    removeMoveablePiece(moveable);
+    addPiece(moveable, current_piece, minx, miny);
+
+    return;
+}
 
 void exitGame(bool& quit) {
     page = MENU;
@@ -883,15 +1061,13 @@ int classic(int uid) {
     // array[row][column]
     vector<vector<Cell>> board(rows, vector<Cell>(cols));
     vector<vector<bool>> moveable(rows, vector<bool>(cols, false));
-    char* current_color = TXT_BLUE;
+    string current_color = TXT_BLUE;
 
-    // testing
-    moveable[2][5] = true;
-    moveable[3][5] = true;
-    moveable[3][6] = true;
-
-    vector<PIECES> pieces_list;
+    // creates a list of switchable pieces
+    vector<ActivePiece> pieces_list;
     placeablePieces(board, pieces_list);
+
+    int score = 0;
 
     // game
     while (true) {
@@ -916,13 +1092,13 @@ int classic(int uid) {
         // pieces list is empty
         bool pieces_list_empty = true;
         for (int i = 0; i < pieces_list.size(); i++) {
-            if (pieces_list[i] != LAST_PIECE) {
+            if (pieces_list[i].type != LAST_PIECE) {
                 pieces_list_empty = false;
                 break;
             }
         }
 
-        // summoning pieces from the kingdom of imagination
+        // summoning random pieces from the kingdom of imagination
         if (pieces_list_empty) {
             placeablePieces(board, pieces_list);
         }
@@ -974,7 +1150,8 @@ int classic(int uid) {
 
             // instructions
             const int INS_START = 3;
-            if (i == INS_START)     cout << "  W / ↑ : move piece up";
+            if (i == INS_START - 2)      cout << "  Score : " << score;
+            else if (i == INS_START)     cout << "  W / ↑ : move piece up";
             else if (i == INS_START + 1) cout << "  A / ← : move piece left";
             else if (i == INS_START + 2) cout << "  S / ↓ : move piece down";
             else if (i == INS_START + 3) cout << "  D / → : move piece right";
@@ -982,7 +1159,7 @@ int classic(int uid) {
             else if (i == INS_START + 5) cout << "  space : place piece";
             else if (i == INS_START + 6) cout << "  enter : use item";
             else if (i == INS_START + 7) cout << "  ESC   : exit game";
-            // when the terminal window isn't maximized, there will be a visual glitch without this 2
+            // when the terminal window isn't maximized, there will be a visual glitch without this -- 2
             else cout << "                               ";
             
             cout << "\n";
@@ -1013,12 +1190,13 @@ int classic(int uid) {
 
             // places piece
             if (inp == ' ' && isPlaceable(moveable, board)) {
-                placePiece(moveable, board, current_color);
+                const char* c_color = current_color.c_str();
+                placePiece(moveable, board, c_color, pieces_list);
             }
 
             // switch piece
             if (inp >= '1' && inp <= '3') {
-                switchPiece(moveable, inp, pieces_list);
+                switchPiece(moveable, inp, pieces_list, current_color);
             }
 
             // exit game
@@ -1028,6 +1206,9 @@ int classic(int uid) {
         
         // player quits game
         if (isquit) break;
+
+        // line cleared
+        // if (lineCleared(board))
     }
 
     cout << string(TXT_RESET);
@@ -1039,7 +1220,7 @@ int classic(int uid) {
 
 // ======== TEAM GAME (Alan) ========
 void team(int uid) {
-    return 0;
+    return;
 }
 
 
