@@ -946,7 +946,7 @@ bool addPiece(
     // move piece if isn't addable
     while (true) {
         int isaddable = isAddable(moveable, type, x, y);
-        cout << " addPiece(4)(1): "<< x << "," << y << ";" << isaddable << endl;
+        // cout << " addPiece(4)(1): "<< x << "," << y << ";" << isaddable << endl;
         if (!isaddable) break;
         if (isaddable == OOR_RIGHT) x--;
         if (isaddable == OOR_BOTTOM) y--;
@@ -1220,7 +1220,7 @@ int classic(int uid) {
 
 // ======== TEAM GAME (Alan) ========
 void team(int uid) {
-    return 0;
+    return;
 }
 
 
