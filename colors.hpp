@@ -35,6 +35,6 @@
 #define TXT_HIDDEN        "\033[8m"
 #define TXT_STRIKETHROUGH "\033[9m"
 
-std::string txtToBg(const char* txt_color);
+std::string txtToBg(const std::string& txt_color);
 
 #endif

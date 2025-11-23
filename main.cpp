@@ -1167,7 +1167,7 @@ void exitGame(bool& quit) {
     quit = true;
 }
 
-int classic(int uid) {
+int classic(int uid = 0) {
     hideCursor();
 
     int rows = 8, cols = 8;
@@ -1236,10 +1236,14 @@ int classic(int uid) {
                 }
 
                 // prints game/colors
-                if (moveable[(i + 1) / 2][(j + 1) / 2]) {
+                int piecey = (i + 1) / 2;
+                int piecex = (j + 1) / 2;
+                if (moveable[piecey][piecex] && board[piecey][piecex].active) {
+                    cout << txtToBg(board[piecey][piecex].color) << u8"▒▒" << TXT_RESET;
+                } else if (moveable[piecey][piecex]) {
                     cout << string(TXT_WHITE) << u8"██" << TXT_RESET;
                 } else {
-                    cout << board[(i + 1) / 2][(j + 1) / 2].color << u8"██" << TXT_RESET;
+                    cout << board[piecey][piecex].color << u8"██" << TXT_RESET;
                 }
             }
 
@@ -1309,7 +1313,7 @@ int classic(int uid) {
             }
 
             // exit game
-            if (inp == '\e') exitGame(isquit);
+            if (inp == '\33') exitGame(isquit);
             break;
         }
         

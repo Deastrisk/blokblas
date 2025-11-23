@@ -14,6 +14,8 @@
         "tuple": "cpp",
         "utility": "cpp",
         "variant": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "format": "cpp",
+        "thread": "cpp"
     }
 }
