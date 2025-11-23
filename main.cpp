@@ -1218,6 +1218,15 @@ int classic(int uid) {
 }
 
 
+// ======== TEAM GAME (Alan) ========
+void team(int uid) {
+    return 0;
+}
+
+
+
+
+
 void exit() {
     showCursor();
 }
@@ -1245,7 +1254,7 @@ int main()
         else if (page == LOGIN) break;
         else if (page == LEADERBOARD) break;
         else if (page == SHOP) break;
-        else if (page == TEAM) break;
+        else if (page == TEAM) team(uid);
         else if (page == EXIT) break;
     }
     
