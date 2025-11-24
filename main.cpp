@@ -24,6 +24,11 @@ enum Page {
 };
 
 enum PIECES {
+        S1,       S2,      SM1,     SM2,
+    // ##    |    ## ## |    ## | ## ##
+    // ## ## | ## ##    | ## ## |    ## ##
+    //    ## |          | ##    |
+
         T1,       T2,       T3,      T4,
     // ##    |          |    ## | ## ## ##
     // ## ## |    ##    | ## ## |    ##
@@ -101,11 +106,33 @@ struct ActivePiece {
 
 
 vector<vector<vector<Cell>>> pieces = {
+    // S1
+    {
+        {Cell(true, TXT_PINK)},
+        {Cell(true, TXT_PINK),    Cell(true, TXT_PINK)},
+        {Cell(false, TXT_PINK),   Cell(true, TXT_PINK)},
+    },
+    // S2
+    {
+        {Cell(false, TXT_PINK),   Cell(true, TXT_PINK),  Cell(true, TXT_PINK)},
+        {Cell(true, TXT_PINK),    Cell(true, TXT_PINK),  Cell(false, TXT_PINK)},
+    },
+    // SM1
+    {
+        {Cell(false, TXT_PINK),   Cell(true, TXT_PINK)},
+        {Cell(true, TXT_PINK),    Cell(true, TXT_PINK)},
+        {Cell(true, TXT_PINK)},
+    },
+    // SM2
+    {
+        {Cell(true, TXT_PINK),    Cell(true, TXT_PINK),  Cell(false, TXT_PINK)},
+        {Cell(false, TXT_PINK),   Cell(true, TXT_PINK),  Cell(true, TXT_PINK)},
+    },
     // T1
     {
         {Cell(true, TXT_GREEN)},
         {Cell(true, TXT_GREEN),   Cell(true, TXT_GREEN)},
-        {Cell(true, TXT_GREEN)}
+        {Cell(true, TXT_GREEN)},
     },
     // T2
     {
@@ -156,7 +183,7 @@ vector<vector<vector<Cell>>> pieces = {
     // LM2
     {
         {Cell(true, TXT_ORANGE),  Cell(true, TXT_ORANGE),   Cell(true, TXT_ORANGE)},
-        {Cell(false, TXT_ORANGE),  Cell(false, TXT_ORANGE),  Cell(true, TXT_ORANGE)},
+        {Cell(false, TXT_ORANGE), Cell(false, TXT_ORANGE),  Cell(true, TXT_ORANGE)},
     },
     // LM3
     {
@@ -731,6 +758,7 @@ bool isPlaceable(
 bool placeablePieces(const vector<vector<Cell>>& board, vector<ActivePiece>& placeable_pieces) {
     // list of all potentially placeable pieces
     vector<PIECES> placeables = {
+        S1, S2, SM1, SM2,
         T1, T2, T3, T4,
         L1, L2, L3, L4,
         LM1, LM2, LM3, LM4,
@@ -968,7 +996,12 @@ void printPiecesList(const vector<ActivePiece>& piece_list) {
     cout << u8"╝\n";
 }
 
-void centerPiece(const vector<vector<bool>>& moveable, const PIECES& type, int& x, int& y){
+void centerPiece(
+    const vector<vector<bool>>& moveable,
+    const PIECES& type,
+    int& x,
+    int& y
+) {
     y = (moveable.size() - pieces[type].size()) / 2;
     int max_width = 0;
     for (int i = 0; i < static_cast<int>(pieces[type].size()); i++) {
@@ -1121,7 +1154,7 @@ bool isSwitchable(const vector<ActivePiece>& piece_list, int inp) {
 }
 
 int checkLines(const vector<vector<Cell>>& board, vector<int>& clear_col, vector<int>& clear_row) {
-    int lines_cleared = 0;
+    int lines_cleared = 16;
 
     // clear_col and clear_row isn't the same size as board
     if (clear_row.size() != board.size() || clear_col.size() != board[0].size()) {
@@ -1135,13 +1168,14 @@ int checkLines(const vector<vector<Cell>>& board, vector<int>& clear_col, vector
 
             // cell isn't active but row is still considered cleared
             if (clear_row[i]) {
-                clear_row[i] = true;
-                lines_cleared++;
+                clear_row[i] = false;
+                lines_cleared--;
             }
 
+            // cell isn't active but cols is still considered cleared
             if (clear_col[j]) {
-                clear_col[j] = true;
-                lines_cleared++;
+                clear_col[j] = false;
+                lines_cleared--;
             }
         }
     }
@@ -1152,7 +1186,7 @@ int checkLines(const vector<vector<Cell>>& board, vector<int>& clear_col, vector
 void clearLines(vector<vector<Cell>>& board, const vector<int>& clear_col, const vector<int>& clear_row) {
     for (int i = 0; i < static_cast<int>(board.size()); i++) {
         for (int j = 0; j < static_cast<int>(board[0].size()); j++) {
-            if (!clear_col[j] || !clear_row[i]) continue;
+            if (!clear_col[j] && !clear_row[i]) continue;
 
             board[i][j].active = false;
             board[i][j].color = TXT_HIDDEN;
@@ -1162,9 +1196,70 @@ void clearLines(vector<vector<Cell>>& board, const vector<int>& clear_col, const
     return;
 }
 
-void exitGame(bool& quit) {
+bool piecesArePlaceable(vector<vector<Cell>> board, vector<ActivePiece> piece_list) {
+    const int piece_count = static_cast<int>(piece_list.size());
+    // the amount of pieces able to be placed (removed for efficiency)
+    // int placeable_count = 0;
+    bool placeable = false;
+
+    const int rows = static_cast<int>(board.size());
+    const int cols = static_cast<int>(board[0].size());
+
+    // skip if all pieces are placed
+    bool areplaced = true;
+    for (int i = 0; i < piece_count; i++) {
+        if (piece_list[i].placed) continue;
+        areplaced = false;
+    }
+
+    if (areplaced) {
+        return true;
+    }
+
+    // query nonplaced pieces
+    for (int type = 0; type < piece_count && !placeable; type++) {
+        ActivePiece current = piece_list[type];
+        if (current.placed) continue;
+
+        placeable = false;
+
+        // piece height
+        int height = static_cast<int>(pieces[current.type].size());
+        int width = 0;
+
+        // find max width
+        for (int i = 0; i < height; i++) {
+            int current_width = pieces[current.type][i].size();
+            if (current_width <= width) continue;
+            width = current_width;
+        }
+
+        // query for unplaceable piece
+        for (int i = 0; i <= rows - height && !placeable; i++) {
+            for (int j = 0; j <= cols - width; j++) {
+                if (!isPlaceable(board, current.type, j, i)) continue;
+
+                // piece is placeable
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+void boardCenteredText(const vector<string>& text, const vector<vector<Cell>> board) {
+    int rows = board.size();
+    int cols = board[0].size();
+    for (int i = 0; i < static_cast<int>(text.size()); i++) {
+        moveCursor(rows + i, (cols * 5 - text[i].size()) / 2);
+        cout << text[i];
+    }
+}
+
+void exitGame() {
     page = MENU;
-    quit = true;
+    cout << TXT_RESET;
 }
 
 int classic(int uid = 0) {
@@ -1252,8 +1347,9 @@ int classic(int uid = 0) {
             else cout << u8" ║";
 
             // instructions
-            const int INS_START = 3;
-            if (i == INS_START - 2)      cout << "  Score : " << score;
+            const int INS_START = 5;
+            if (i == INS_START - 3)      cout << "  " << TXT_BOLD << TXT_BRIGHT_GREEN << "Guest" << TXT_RESET;
+            else if (i == INS_START - 2) cout << "  Score : " << score;
             else if (i == INS_START)     cout << "  W / ↑ : move piece up";
             else if (i == INS_START + 1) cout << "  A / ← : move piece left";
             else if (i == INS_START + 2) cout << "  S / ↓ : move piece down";
@@ -1278,9 +1374,6 @@ int classic(int uid = 0) {
 
         printPiecesList(pieces_list);
 
-        // will the player quit the game?? D:
-        bool isquit = false; // they couldn't possibly... right?
-
         // ask for input
         while (true) {
             unsigned char inp = getch();
@@ -1300,11 +1393,13 @@ int classic(int uid = 0) {
             }
 
             // clear lines
-            vector<int> clear_col(board.size(), false);
-            vector<int> clear_row(board[0].size(), false);
-            if (piece_placed && checkLines(board, clear_col, clear_row)) {
-                cout << "piece_placed\n";
+            vector<int> clear_col(board.size(), true);
+            vector<int> clear_row(board[0].size(), true);
+            int line_count = checkLines(board, clear_col, clear_row);    
+            score += line_count;
+            if (piece_placed && line_count > 0) {
                 clearLines(board, clear_col, clear_row);
+                // lineClearAnimation(board, clear_col, clear_col, )
             }
 
             // switch piece
@@ -1312,16 +1407,13 @@ int classic(int uid = 0) {
                 switchPiece(moveable, inp, pieces_list, current_color);
             }
 
-            // exit game
-            if (inp == '\33') exitGame(isquit);
+            // player exit game
+            if (inp == '\33') {
+                exitGame();
+                return 0;
+            }
             break;
         }
-        
-        // player quits game
-        if (isquit) break;
-
-        // line cleared
-        // if (lineCleared(board))
         
         // pieces list is empty
         bool pieces_list_empty = true;
@@ -1331,6 +1423,22 @@ int classic(int uid = 0) {
                 // cout << "beroeihhoesf";
                 break;
             }
+        }
+
+        // player loses
+        int isplaceable = piecesArePlaceable(board, pieces_list);
+        if (!isplaceable) {
+            vector<string> text = {
+                " You Lost :( ",
+                " Your final score is: " + to_string(score) + " ",
+                "",
+                " space to go to menu ",
+            };
+            
+            boardCenteredText(text, board);
+            if (getch()) {};
+            exitGame();
+            return 0;
         }
 
         // summoning random pieces from Ankewelts kingdom
@@ -1381,6 +1489,7 @@ int main()
         if (page == MENU) mainMenu();
         else if (page == CLASSIC) classic(uid);
         else if (page == LOGIN) break;
+        else if (page == LOGOUT) break;
         else if (page == LEADERBOARD) break;
         else if (page == SHOP) break;
         else if (page == TEAM) team(uid);
