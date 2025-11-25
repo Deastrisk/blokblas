@@ -1279,7 +1279,12 @@ bool piecesArePlaceable(vector<vector<Cell>> board, vector<ActivePiece> piece_li
     return false;
 }
 
-void classicDisplay(const vector<vector<Cell>>& board, const vector<vector<bool>>& moveable, const int score, vector<ActivePiece> pieces_list) {
+void classicDisplay(
+    const vector<vector<Cell>>& board, 
+    const vector<vector<bool>>& moveable, 
+    const int score, 
+    vector<ActivePiece> pieces_list
+) {
     int rows = board.size();
     int cols = board[0].size();
 
@@ -1408,7 +1413,13 @@ int classic(int uid = 0) {
 
         // score animation
         if (prev_score < score) {
-            prev_score += 7;
+            // increment the score
+            int difference = score - prev_score;
+            if (difference > 100) {
+                prev_score += (score - prev_score) / 7;
+            } else {
+                prev_score += 7;
+            }
 
             if (prev_score > score) {
                 prev_score = score;
@@ -1416,8 +1427,7 @@ int classic(int uid = 0) {
 
             moveCursor(6, cols * 5 + 12);
             cout << prev_score;
-            Sleep(6);
-            // cout << "score animation\n";
+            this_thread::sleep_for(chrono::milliseconds(60));
         }
 
         // display
@@ -1451,12 +1461,12 @@ int classic(int uid = 0) {
             vector<int> clear_row(board[0].size(), true);
             int line_count = checkLines(board, clear_col, clear_row);    
             score += line_count * 50;
-            // if (piece_placed && line_count > 0) {
-            //     clearLines(board, clear_col, clear_row);
-            //     moveCursor(6, cols * 5 + 12);
-            //     cout << printPadding(static_cast<int>(log10(score) + 2), ' ');
-            //     // update_score = true;
-            // }
+            if (piece_placed && line_count > 0) {
+                clearLines(board, clear_col, clear_row);
+                moveCursor(6, cols * 5 + 12);
+                cout << printPadding(static_cast<int>(log10(score) + 2), ' ');
+                // update_score = true;
+            }
 
             // switch piece
             if (isSwitchable(pieces_list, inp)) {
