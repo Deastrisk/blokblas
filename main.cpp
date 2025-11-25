@@ -1,15 +1,16 @@
-#include <array>
 #include <chrono>
 #include <conio.h>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 #include <string>
 #include <thread>
 #include <vector>
 #include <windows.h>
-#include "colors.hpp"
+#include "libraries/colors.hpp"
+#include "libraries/ansi_utils.hpp"
 
 using namespace std;
 
@@ -319,26 +320,6 @@ Page page = MENU;
 // ========= FUNCTIONS ========
 // dpt dari gugel jujur ae
 // mslhe gk ada system("cls") tanpa windows.h T.T
-void clearScreen() {
-    cout << "\033[2J\033[2;1H";
-}
-
-void hideCursor() {
-    cout << "\033[?25l";
-}
-
-void showCursor() {
-    cout << "\033[?25h";
-}
-
-void clear() {
-    cout << "\033[2J";
-}
-
-void moveCursor(int row, int column) {
-    cout << "\033[" << row << ";" << column << "H";
-}
-
 string printPadding(int pad, char c = ' ') {
     string result = "";
     for (int i = 0; i < pad; i++) {
@@ -361,6 +342,55 @@ void arrowToWASD(unsigned char& key) {
     key = inp;
     return;
 }
+
+long long int strlenIgnoreANSI(string text) {
+    long long int sublen;
+    long long int len = 0;
+    string sub;
+    for (int i = 0; i < text.length();) {
+
+        // remaining string is less than 2 chars; can't be a CSI ANSI prefix
+        if (i + 1 >= text.length()) {
+            len++;
+            i++;
+            continue;
+        }
+
+        sub = text.substr(i, text.length() - i);
+
+        // doesn't begin with an ANSI CNI prefix
+        if (!isCsiAnsi(sub)) {
+            len++;
+            i++;
+            continue;
+        }
+
+        // skip ESC + [
+        i += 2;
+
+        // loop until reaches final byte
+        while (i < text.length() && !isAnsiFinalByte(text[i])) {
+            i++;
+        };
+
+        // skips final byte
+        if (i < text.length()) i++;
+    }
+
+    return len;
+}
+
+void boardCenteredText(const vector<string>& text, const vector<vector<Cell>> board) {
+    int rows = board.size();
+    int cols = board[0].size();
+    for (int i = 0; i < static_cast<int>(text.size()); i++) {
+        moveCursor(rows + i, (cols * 5 - strlenIgnoreANSI(text[i])) / 2);
+        cout << text[i];
+    }
+    moveCursor(rows * 5, 0);
+    cout << (cols * 5 - strlenIgnoreANSI(text[1]) / 2);
+}
+
 
 // ======== MENU FUNCTIONS ========
 void animateMenu() {
@@ -1248,13 +1278,91 @@ bool piecesArePlaceable(vector<vector<Cell>> board, vector<ActivePiece> piece_li
     return false;
 }
 
-void boardCenteredText(const vector<string>& text, const vector<vector<Cell>> board) {
+void classicDisplay(
+    const vector<vector<Cell>>& board, 
+    const vector<vector<bool>>& moveable, 
+    const int score, 
+    vector<ActivePiece> pieces_list
+) {
     int rows = board.size();
     int cols = board[0].size();
-    for (int i = 0; i < static_cast<int>(text.size()); i++) {
-        moveCursor(rows + i, (cols * 5 - text[i].size()) / 2);
-        cout << text[i];
+
+    // carves topmost edge into space
+    moveCursor(1, 0);
+    cout << setw(41) << "\n";
+    cout << u8"╔";
+    for (int i = 0; i < cols * 2 - 1; i++) {
+        if (i % 2) cout << u8"╤";
+        else cout << u8"════";
     }
+    // when the terminal window isn't maximized, there will be a visual glitch without this
+    cout << u8"╗                                     \n";
+
+    for (int i = 0; i < rows * 2 - 1; i++) {
+        // left border
+        if (i % 2) cout << u8"╟─";
+        else cout << u8"║ ";
+
+        // isinya
+        for (int j = 0; j < cols * 2 - 1; j++) {
+            if (i % 2 && j % 2) {
+                cout << "─┼─";
+                continue;
+            }
+
+            if (i % 2) {
+                cout << "──";
+                continue;
+            }
+
+            if (j % 2) {
+                cout << " │ ";
+                continue;
+            }
+
+            // prints game/colors
+            int piecey = (i + 1) / 2;
+            int piecex = (j + 1) / 2;
+            if (moveable[piecey][piecex] && board[piecey][piecex].active) {
+                cout << txtToBg(board[piecey][piecex].color) << u8"░░" << TXT_RESET;
+            } else if (moveable[piecey][piecex]) {
+                cout << string(TXT_WHITE) << u8"██" << TXT_RESET;
+            } else {
+                cout << board[piecey][piecex].color << u8"██" << TXT_RESET;
+            }
+        }
+
+        // right border
+        if (i % 2) cout << u8"─╢";
+        else cout << u8" ║";
+
+        // instructions
+        const int INS_START = 5;
+        if (i == INS_START - 3)      cout << "  " << TXT_BOLD << TXT_BRIGHT_GREEN << "Guest" << TXT_RESET;
+        else if (i == INS_START - 2) cout << "  Score : " << score;
+        else if (i == INS_START)     cout << "  W / ↑ : move piece up";
+        else if (i == INS_START + 1) cout << "  A / ← : move piece left";
+        else if (i == INS_START + 2) cout << "  S / ↓ : move piece down";
+        else if (i == INS_START + 3) cout << "  D / → : move piece right";
+        else if (i == INS_START + 4) cout << "  1-3   : select piece";
+        else if (i == INS_START + 5) cout << "  space : place piece";
+        else if (i == INS_START + 6) cout << "  enter : use item";
+        else if (i == INS_START + 7) cout << "  ESC   : exit game";
+        // when the terminal window isn't maximized, there will be a visual glitch without this -- 2
+        else cout << "                               ";
+        
+        cout << "\n";
+    }
+
+    // print bottom border
+    cout << u8"╚";
+    for (int i = 0; i < cols * 2 - 1; i++) {
+        if (i % 2) cout << u8"╧";
+        else cout << u8"════";
+    }
+    cout << u8"╝\n";
+
+    printPiecesList(pieces_list);
 }
 
 void exitGame() {
@@ -1275,7 +1383,12 @@ int classic(int uid = 0) {
     vector<ActivePiece> pieces_list;
     placeablePieces(board, pieces_list);
 
-    int score = 0;
+    int prev_score = 0;
+    int score = prev_score;
+    int combo = 0;
+
+    bool update_display = true;
+    // bool update_score = true;
 
     // game
     while (true) {
@@ -1297,85 +1410,36 @@ int classic(int uid = 0) {
         // cout << u8"║ ██ │ ██ │ ██ │ ██ │ ██ │ ██ │ ██ │ ██ ║\n";
         // cout << u8"╚════╧════╧════╧════╧════╧════╧════╧════╝\n";
 
-        // carves topmost edge into space
-        moveCursor(1, 0);
-        cout << setw(41) << "\n";
-        cout << u8"╔";
-        for (int i = 0; i < cols * 2 - 1; i++) {
-            if (i % 2) cout << u8"╤";
-            else cout << u8"════";
-        }
-        // when the terminal window isn't maximized, there will be a visual glitch without this
-        cout << u8"╗                                     \n";
-
-        for (int i = 0; i < rows * 2 - 1; i++) {
-            // left border
-            if (i % 2) cout << u8"╟─";
-            else cout << u8"║ ";
-
-            // isinya
-            for (int j = 0; j < cols * 2 - 1; j++) {
-                if (i % 2 && j % 2) {
-                    cout << "─┼─";
-                    continue;
-                }
-
-                if (i % 2) {
-                    cout << "──";
-                    continue;
-                }
-
-                if (j % 2) {
-                    cout << " │ ";
-                    continue;
-                }
-
-                // prints game/colors
-                int piecey = (i + 1) / 2;
-                int piecex = (j + 1) / 2;
-                if (moveable[piecey][piecex] && board[piecey][piecex].active) {
-                    cout << txtToBg(board[piecey][piecex].color) << u8"▒▒" << TXT_RESET;
-                } else if (moveable[piecey][piecex]) {
-                    cout << string(TXT_WHITE) << u8"██" << TXT_RESET;
-                } else {
-                    cout << board[piecey][piecex].color << u8"██" << TXT_RESET;
-                }
+        // score animation
+        if (prev_score < score) {
+            // increment the score
+            int difference = score - prev_score;
+            if (difference > 100) {
+                prev_score += (score - prev_score) / 7;
+            } else {
+                prev_score += 7;
             }
 
-            // right border
-            if (i % 2) cout << u8"─╢";
-            else cout << u8" ║";
+            if (prev_score > score) {
+                prev_score = score;
+            }
 
-            // instructions
-            const int INS_START = 5;
-            if (i == INS_START - 3)      cout << "  " << TXT_BOLD << TXT_BRIGHT_GREEN << "Guest" << TXT_RESET;
-            else if (i == INS_START - 2) cout << "  Score : " << score;
-            else if (i == INS_START)     cout << "  W / ↑ : move piece up";
-            else if (i == INS_START + 1) cout << "  A / ← : move piece left";
-            else if (i == INS_START + 2) cout << "  S / ↓ : move piece down";
-            else if (i == INS_START + 3) cout << "  D / → : move piece right";
-            else if (i == INS_START + 4) cout << "  1-3   : select piece";
-            else if (i == INS_START + 5) cout << "  space : place piece";
-            else if (i == INS_START + 6) cout << "  enter : use item";
-            else if (i == INS_START + 7) cout << "  ESC   : exit game";
-            // when the terminal window isn't maximized, there will be a visual glitch without this -- 2
-            else cout << "                               ";
-            
-            cout << "\n";
+            moveCursor(6, cols * 5 + 12);
+            cout << prev_score;
+            this_thread::sleep_for(chrono::milliseconds(60));
         }
 
-        // print bottom border
-        cout << u8"╚";
-        for (int i = 0; i < cols * 2 - 1; i++) {
-            if (i % 2) cout << u8"╧";
-            else cout << u8"════";
+        // display
+        if (update_display) {
+            classicDisplay(board, moveable, score, pieces_list);
+            update_display = false;
+            // cout << "display\n";
         }
-        cout << u8"╝\n";
 
-        printPiecesList(pieces_list);
+        bool piece_placed = false;
 
         // ask for input
-        while (true) {
+        if (kbhit()) {
             unsigned char inp = getch();
 
             // moves piece
@@ -1385,7 +1449,6 @@ int classic(int uid = 0) {
             }
 
             // places piece
-            bool piece_placed = false;
             if (inp == ' ' && isPlaceable(moveable, board)) {
                 const char* c_color = current_color.c_str();
                 placePiece(moveable, board, c_color, pieces_list);
@@ -1396,10 +1459,12 @@ int classic(int uid = 0) {
             vector<int> clear_col(board.size(), true);
             vector<int> clear_row(board[0].size(), true);
             int line_count = checkLines(board, clear_col, clear_row);    
-            score += line_count;
+            score += line_count * 50;
             if (piece_placed && line_count > 0) {
                 clearLines(board, clear_col, clear_row);
-                // lineClearAnimation(board, clear_col, clear_col, )
+                moveCursor(6, cols * 5 + 12);
+                cout << printPadding(static_cast<int>(log10(score) + 2), ' ');
+                // update_score = true;
             }
 
             // switch piece
@@ -1412,39 +1477,42 @@ int classic(int uid = 0) {
                 exitGame();
                 return 0;
             }
-            break;
+
+            update_display = true;
         }
         
-        // pieces list is empty
-        bool pieces_list_empty = true;
-        for (int i = 0; i < static_cast<int>(pieces_list.size()); i++) {
-            if (!pieces_list[i].placed) {
-                pieces_list_empty = false;
-                // cout << "beroeihhoesf";
-                break;
+        // piece placed
+        if (piece_placed) {
+            // pieces list is empty
+            bool pieces_list_empty = true;
+            for (int i = 0; i < static_cast<int>(pieces_list.size()); i++) {
+                if (!pieces_list[i].placed) {
+                    pieces_list_empty = false;
+                    break;
+                }
             }
-        }
-
-        // player loses
-        int isplaceable = piecesArePlaceable(board, pieces_list);
-        if (!isplaceable) {
-            vector<string> text = {
-                " You Lost :( ",
-                " Your final score is: " + to_string(score) + " ",
-                "",
-                " space to go to menu ",
-            };
             
-            boardCenteredText(text, board);
-            if (getch()) {};
-            exitGame();
-            return 0;
-        }
+            // player loses
+            int isplaceable = piecesArePlaceable(board, pieces_list);
+            if (!isplaceable) {
+                vector<string> text = {
+                    string(TXT_RED) + TXT_BOLD + " You Lost D: " + TXT_RESET,
+                    " Your final score is: " + string(TXT_BOLD) + TXT_LIGHT_BLUE + to_string(score) + TXT_RESET + " ",
+                    "",
+                    string(TXT_LIGHT_BLUE) + " space" + TXT_RESET + " to go to menu ",
+                };
+                
+                boardCenteredText(text, board);
+                if (getch()) {};
+                exitGame();
+                return 0;
+            }
 
-        // summoning random pieces from Ankewelts kingdom
-        if (pieces_list_empty) {
-            // cout << pieces_list_empty;
-            placeablePieces(board, pieces_list);
+            // summoning random pieces from Ankewelts kingdom
+            if (pieces_list_empty) {
+                // cout << pieces_list_empty;
+                placeablePieces(board, pieces_list);
+            }
         }
     }
 

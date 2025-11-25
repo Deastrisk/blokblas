@@ -1,7 +1,6 @@
 #include "colors.hpp"
 #include <iostream>
 #include <string>
-#include <regex>
 
 using namespace std;
 
@@ -25,6 +24,7 @@ string txtToBg(const string& txt_color) {
     }
 
     // format 3 : "\033[38;5;<0-255>m"
+    // used regex before tp katae regex di c++ lambat dan mending pake if...
     if (
         (txt_color.substr(0, 7) == "\033[38;5;") &&
         (((txt_color.length() == 9) && (
