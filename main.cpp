@@ -5,14 +5,17 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <fstream>
 #include <string>
 #include <thread>
 #include <vector>
 #include <windows.h>
+#include <mmsystem.h>
 #include "libraries/colors.hpp"
 #include "libraries/ansi_utils.hpp"
 
 using namespace std;
+
 
 #define UP_ARROW 72
 #define DOWN_ARROW 80
@@ -344,13 +347,12 @@ void arrowToWASD(unsigned char& key) {
 }
 
 long long int strlenIgnoreANSI(string text) {
-    long long int sublen;
     long long int len = 0;
     string sub;
-    for (int i = 0; i < text.length();) {
+    for (int i = 0; i < static_cast<int>(text.length());) {
 
         // remaining string is less than 2 chars; can't be a CSI ANSI prefix
-        if (i + 1 >= text.length()) {
+        if (i + 1 >= static_cast<int>(text.length())) {
             len++;
             i++;
             continue;
@@ -369,12 +371,12 @@ long long int strlenIgnoreANSI(string text) {
         i += 2;
 
         // loop until reaches final byte
-        while (i < text.length() && !isAnsiFinalByte(text[i])) {
+        while (i < static_cast<int>(text.length()) && !isAnsiFinalByte(text[i])) {
             i++;
         };
 
         // skips final byte
-        if (i < text.length()) i++;
+        if (i < static_cast<int>(text.length())) i++;
     }
 
     return len;
@@ -387,8 +389,6 @@ void boardCenteredText(const vector<string>& text, const vector<vector<Cell>> bo
         moveCursor(rows + i, (cols * 5 - strlenIgnoreANSI(text[i])) / 2);
         cout << text[i];
     }
-    moveCursor(rows * 5, 0);
-    cout << (cols * 5 - strlenIgnoreANSI(text[1]) / 2);
 }
 
 
@@ -495,11 +495,11 @@ void animateMenu() {
         cout << "\\ \\                                                                                                                 /\n";
         cout << " \\_\\_______________________________________________________________________________________________________________/\n";
         this_thread::sleep_for(chrono::milliseconds(ANIMATION_DELAY_MS));
-        // cout << "test";
     }
 }
 
 void mainMenu() {
+    PlaySound(TEXT("sfx/bg_music_1.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
     const string BLOCK_BLAST = "$$$$$$$\\  $$\\       $$$$$$\\   $$$$$$\\  $$\\   $$\\       $$$$$$$\\  $$\\        $$$$$$\\   $$$$$$\\ $$$$$$$$\\ ";
 
     const string COLORED_BLOCK_BLAST[] = {
@@ -602,6 +602,7 @@ void mainMenu() {
         unsigned char inp;
         while (true) {
             inp = getch();
+            PlaySound(TEXT("sfx/single_click.wav"), NULL, SND_FILENAME | SND_ASYNC);
 
             // detect arrow input
             arrowToWASD(inp);
@@ -775,7 +776,6 @@ bool isPlaceable(
 
             // the selected board & piece cell are both active, therefore not placeable
             if (board[y + start_y][x + start_x].active) {
-                // cout << "test";
                 return false;
             }
         }
@@ -932,6 +932,9 @@ void placePiece(
     string color, 
     vector<ActivePiece>& piece_list
 ) {
+    // place piece sfx
+    PlaySound(TEXT("sfx/place_piece.wav"), NULL, SND_FILENAME | SND_ASYNC);
+
     // "copies" moveable to board
     for (int i = 0; i < static_cast<int>(moveable.size()); i++) {
         for (int j = 0; j < static_cast<int>(moveable[0].size()); j++) {
@@ -1008,7 +1011,6 @@ void printPiecesList(const vector<ActivePiece>& piece_list) {
 
                 // print colored cell
                 cout << pieces[piece_list[type].type][i][j].color << u8"██" << TXT_RESET;
-                // cout << u8"██";
             }
             type++;
         }
@@ -1055,18 +1057,15 @@ bool alignPiece(
     // move piece if isn't addable
     while (true) {
         int isaddable = outOfBound(moveable, type, x, y);
-        // cout << " addPiece(4)(1): "<< x << "," << y << ";" << isaddable << endl;
         if (!isaddable) break;
         if (isaddable == OOB_RIGHT) x--;
         if (isaddable == OOB_BOTTOM) y--;
 
         // piece is too large
         if (isaddable == OOB_LEFT) {
-            // cout << "OOB LEFT" << endl;
             return false;
         }
         if (isaddable == OOB_TOP) {
-            // cout << "OOB TOP" << endl;
             return false;
         }
     }
@@ -1081,7 +1080,6 @@ bool addPiece(
     int y
 ) {
     if (!alignPiece(moveable, type, x, y)) return false;
-    // cout << "test";
 
     // adds piece to moveable
     for (int i = 0; i < static_cast<int>(pieces[type].size()); i++) {
@@ -1092,7 +1090,6 @@ bool addPiece(
             moveable[i + y][j + x] = pieces[type][i][j].active;
         }
     }
-    // cout << "addPiece(4)(2): " << type << "\n";
 
     return true;
 }
@@ -1101,7 +1098,6 @@ bool addPiece(vector<vector<bool>>& moveable, const PIECES& type) {
     int centery, centerx;
     centerPiece(moveable, type, centerx, centery);
     if (!addPiece(moveable, type, centerx, centery)) return false;
-    // cout << " addpiece(2): " << centerx << "," << centery << endl;
     return true;
 }
 
@@ -1118,7 +1114,6 @@ void getTopLeft(const vector<vector<bool>>& moveable, int& x, int& y) {
             if (i >= miny && j >= minx) continue;
             if (i < miny) miny = i;
             if (j < minx) minx = j;
-            // cout << int(minx) << "," << int(miny);
         }
     }
 
@@ -1132,21 +1127,20 @@ void switchPiece(
     vector<ActivePiece>& piece_list, 
     string& color
 ) {
+    // switch piece sfx
+    PlaySound(TEXT("sfx/switch_piece.wav"), NULL, SND_FILENAME | SND_ASYNC);
+
     int next_piece_id = inp - '1';
     PIECES next_piece = piece_list[next_piece_id].type;
     const int NO_ACTIVE_PIECE = -1;
     int current_piece_id = NO_ACTIVE_PIECE;
 
     // gets currently used piece
-    // cout << "switchPieces(0): ";
     for (int i = 0; i < static_cast<int>(piece_list.size()); i++) {
-        // cout << piece_list[i].moveable << ", ";
         if (piece_list[i].moveable) {
-            // cout << current_piece;
             current_piece_id = i;
         }
     }
-    // cout << endl;
     
     // current piece is the same as next piece
     if (current_piece_id == next_piece_id) return;
@@ -1156,7 +1150,6 @@ void switchPiece(
         removeMoveablePiece(moveable);
         addPiece(moveable, next_piece);
         color = pieces[next_piece][0][0].color;
-        // cout << "switchPiece:" << int(inp) << "," << current_piece_id << ", " << next_piece_id << endl;
         piece_list[next_piece_id].moveable = true;
         return;
     }
@@ -1214,6 +1207,10 @@ int checkLines(const vector<vector<Cell>>& board, vector<int>& clear_col, vector
 }
 
 void clearLines(vector<vector<Cell>>& board, const vector<int>& clear_col, const vector<int>& clear_row) {
+    // clear line sfx
+    PlaySound(TEXT("sfx/line_clear.wav"), NULL, SND_FILENAME | SND_ASYNC);
+
+    // clears line
     for (int i = 0; i < static_cast<int>(board.size()); i++) {
         for (int j = 0; j < static_cast<int>(board[0].size()); j++) {
             if (!clear_col[j] && !clear_row[i]) continue;
@@ -1365,8 +1362,9 @@ void classicDisplay(
     printPiecesList(pieces_list);
 }
 
-void exitGame() {
+void exitPage() {
     page = MENU;
+    PlaySound(NULL, 0, 0);
     cout << TXT_RESET;
 }
 
@@ -1433,7 +1431,6 @@ int classic(int uid = 0) {
         if (update_display) {
             classicDisplay(board, moveable, score, pieces_list);
             update_display = false;
-            // cout << "display\n";
         }
 
         bool piece_placed = false;
@@ -1441,11 +1438,13 @@ int classic(int uid = 0) {
         // ask for input
         if (kbhit()) {
             unsigned char inp = getch();
-
+            
             // moves piece
             arrowToWASD(inp);
             if (isMoveable(moveable, inp)) {
                 movePiece(moveable, inp);
+                // click sfx
+                PlaySound(TEXT("sfx/single_click.wav"), NULL, SND_FILENAME | SND_ASYNC);
             }
 
             // places piece
@@ -1464,7 +1463,6 @@ int classic(int uid = 0) {
                 clearLines(board, clear_col, clear_row);
                 moveCursor(6, cols * 5 + 12);
                 cout << printPadding(static_cast<int>(log10(score) + 2), ' ');
-                // update_score = true;
             }
 
             // switch piece
@@ -1474,7 +1472,7 @@ int classic(int uid = 0) {
 
             // player exit game
             if (inp == '\33') {
-                exitGame();
+                exitPage();
                 return 0;
             }
 
@@ -1495,6 +1493,7 @@ int classic(int uid = 0) {
             // player loses
             int isplaceable = piecesArePlaceable(board, pieces_list);
             if (!isplaceable) {
+                PlaySound(TEXT("sfx/lose_sound.wav"), NULL, SND_FILENAME | SND_ASYNC);
                 vector<string> text = {
                     string(TXT_RED) + TXT_BOLD + " You Lost D: " + TXT_RESET,
                     " Your final score is: " + string(TXT_BOLD) + TXT_LIGHT_BLUE + to_string(score) + TXT_RESET + " ",
@@ -1504,13 +1503,12 @@ int classic(int uid = 0) {
                 
                 boardCenteredText(text, board);
                 if (getch()) {};
-                exitGame();
+                exitPage();
                 return 0;
             }
 
             // summoning random pieces from Ankewelts kingdom
             if (pieces_list_empty) {
-                // cout << pieces_list_empty;
                 placeablePieces(board, pieces_list);
             }
         }
@@ -1542,6 +1540,12 @@ int main()
     hideCursor();
     srand(time(0));
 
+    // menginisialisasi sound engine
+    // if (ma_engine_init(NULL, &engine) != MA_SUCCESS) return -1;
+    // if (ma_engine_init(NULL, &engine) != MA_SUCCESS) return -2;
+    // if (ma_sound_init_from_file(&engine, "sfx/lose_sound.wav", 0, NULL, NULL, &sfx_lose_sound)) return -3;
+    // if (ma_sound_init_from_file(&engine, "sfx/line_clear.wav", 0, NULL, NULL, &sfx_line_clear)) return -4;
+
     // spy karakter unicode kyk ╝ bisa ngeprint di terminal
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
@@ -1564,6 +1568,7 @@ int main()
         else if (page == EXIT) break;
     }
     
+    // ma_engine_uninit(&engine);
     showCursor();
     return 0;
 }
