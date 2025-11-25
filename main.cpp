@@ -1,4 +1,3 @@
-#include <array>
 #include <chrono>
 #include <conio.h>
 #include <cstdlib>
