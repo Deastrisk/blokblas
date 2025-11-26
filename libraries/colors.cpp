@@ -17,7 +17,7 @@ string txtToBg(const string& txt_color) {
     // format 2 : "\033[<90-97>m"
     if (
         (txt_color.substr(0, 3) == "\033[9") &&
-        (txt_color[3] >= '0' && txt_color[3] <= 7) &&
+        (txt_color[3] >= '0' && txt_color[3] <= '7') &&
         (txt_color[4] == 'm')
     ) {
         return "\033[10" + txt_color.substr(3, 1) + "m";
@@ -38,7 +38,7 @@ string txtToBg(const string& txt_color) {
         )) ||
         ((txt_color.length() == 11 && txt_color[7] == '1') && (
             (txt_color[8] >= '0' && txt_color[8] <= '9') &&
-            (txt_color[9] >= '0' && txt_color[8] <= '9') &&
+            (txt_color[9] >= '0' && txt_color[9] <= '9') &&
             (txt_color[10] == 'm')
         )) ||
         ((txt_color.length() == 11 && txt_color[7] == '2') && (
