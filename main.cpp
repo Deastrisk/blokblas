@@ -1,3 +1,5 @@
+#define MA_IMPLEMENTATION
+#include "miniaudio.h"
 #include <chrono>
 #include <conio.h>
 #include <cstdlib>
@@ -21,6 +23,15 @@ using namespace std;
 #define DOWN_ARROW 80
 #define LEFT_ARROW 75
 #define RIGHT_ARROW 77
+
+// music
+ma_engine engine;
+ma_sound bgm_menu;
+ma_sound sfx_click;
+ma_sound sfx_switch_piece;
+ma_sound sfx_place_piece;
+ma_sound sfx_line_clear;
+ma_sound sfx_lose;
 
 enum Page {
     MENU, CLASSIC, TEAM, LEADERBOARD, LOGIN, EXIT, LOGOUT, SHOP,
@@ -499,7 +510,8 @@ void animateMenu() {
 }
 
 void mainMenu() {
-    PlaySound(TEXT("sfx/bg_music_1.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
+    ma_sound_start(&bgm_menu);
+
     const string BLOCK_BLAST = "$$$$$$$\\  $$\\       $$$$$$\\   $$$$$$\\  $$\\   $$\\       $$$$$$$\\  $$\\        $$$$$$\\   $$$$$$\\ $$$$$$$$\\ ";
 
     const string COLORED_BLOCK_BLAST[] = {
@@ -601,8 +613,15 @@ void mainMenu() {
         // user input
         unsigned char inp;
         while (true) {
+            // stop sound if it has ended
+            if (ma_sound_at_end(&sfx_click)) {
+                ma_sound_stop(&sfx_click);
+            }
+
             inp = getch();
-            PlaySound(TEXT("sfx/single_click.wav"), NULL, SND_FILENAME | SND_ASYNC);
+
+            // click sound
+            ma_sound_start(&sfx_click);
 
             // detect arrow input
             arrowToWASD(inp);
@@ -711,10 +730,18 @@ void mainMenu() {
 
         if (inp == '\r') break;
     }
+
+    ma_sound_stop(&sfx_click);
+    ma_sound_stop(&bgm_menu);
 }
 
 
 // ======== GAME KLASIK (GAME BIASA) Marcio ==========
+void exitPage() {
+    page = MENU;
+    cout << TXT_RESET;
+}
+
 int outOfBound(
     const vector<vector<bool>>& board,
     const PIECES& piece, 
@@ -870,6 +897,9 @@ void movePiece(vector<vector<bool>>& moveable, const char& move) {
         default: return;
     }
 
+    // move piece sfx
+    ma_sound_start(&sfx_click);
+
     // moves piece
     vector<vector<bool>> cpy(moveable.size(), vector<bool>(moveable[0].size()));
     for (int i = 0; i < static_cast<int>(moveable.size()); i++) {
@@ -933,7 +963,7 @@ void placePiece(
     vector<ActivePiece>& piece_list
 ) {
     // place piece sfx
-    PlaySound(TEXT("sfx/place_piece.wav"), NULL, SND_FILENAME | SND_ASYNC);
+    ma_sound_start(&sfx_place_piece);
 
     // "copies" moveable to board
     for (int i = 0; i < static_cast<int>(moveable.size()); i++) {
@@ -1128,7 +1158,7 @@ void switchPiece(
     string& color
 ) {
     // switch piece sfx
-    PlaySound(TEXT("sfx/switch_piece.wav"), NULL, SND_FILENAME | SND_ASYNC);
+    ma_sound_start(&sfx_switch_piece);
 
     int next_piece_id = inp - '1';
     PIECES next_piece = piece_list[next_piece_id].type;
@@ -1208,7 +1238,7 @@ int checkLines(const vector<vector<Cell>>& board, vector<int>& clear_col, vector
 
 void clearLines(vector<vector<Cell>>& board, const vector<int>& clear_col, const vector<int>& clear_row) {
     // clear line sfx
-    PlaySound(TEXT("sfx/line_clear.wav"), NULL, SND_FILENAME | SND_ASYNC);
+    ma_sound_start(&sfx_line_clear);
 
     // clears line
     for (int i = 0; i < static_cast<int>(board.size()); i++) {
@@ -1362,10 +1392,20 @@ void classicDisplay(
     printPiecesList(pieces_list);
 }
 
-void exitPage() {
-    page = MENU;
-    PlaySound(NULL, 0, 0);
-    cout << TXT_RESET;
+void loseGame(const vector<vector<Cell>> board, int score) {
+    // lost sound sfx
+    ma_sound_start(&sfx_lose);
+    
+    vector<string> text = {
+        string(TXT_RED) + TXT_BOLD + " You Lost D: " + TXT_RESET,
+        " Your final score is: " + string(TXT_BOLD) + TXT_LIGHT_BLUE + to_string(score) + TXT_RESET + " ",
+        "",
+        string(TXT_LIGHT_BLUE) + " space" + TXT_RESET + " to go to menu ",
+    };
+    
+    boardCenteredText(text, board);
+    if (getch()) {};
+    exitPage();
 }
 
 int classic(int uid = 0) {
@@ -1443,8 +1483,6 @@ int classic(int uid = 0) {
             arrowToWASD(inp);
             if (isMoveable(moveable, inp)) {
                 movePiece(moveable, inp);
-                // click sfx
-                PlaySound(TEXT("sfx/single_click.wav"), NULL, SND_FILENAME | SND_ASYNC);
             }
 
             // places piece
@@ -1493,17 +1531,7 @@ int classic(int uid = 0) {
             // player loses
             int isplaceable = piecesArePlaceable(board, pieces_list);
             if (!isplaceable) {
-                PlaySound(TEXT("sfx/lose_sound.wav"), NULL, SND_FILENAME | SND_ASYNC);
-                vector<string> text = {
-                    string(TXT_RED) + TXT_BOLD + " You Lost D: " + TXT_RESET,
-                    " Your final score is: " + string(TXT_BOLD) + TXT_LIGHT_BLUE + to_string(score) + TXT_RESET + " ",
-                    "",
-                    string(TXT_LIGHT_BLUE) + " space" + TXT_RESET + " to go to menu ",
-                };
-                
-                boardCenteredText(text, board);
-                if (getch()) {};
-                exitPage();
+                loseGame(board, score);
                 return 0;
             }
 
@@ -1540,11 +1568,65 @@ int main()
     hideCursor();
     srand(time(0));
 
-    // menginisialisasi sound engine
-    // if (ma_engine_init(NULL, &engine) != MA_SUCCESS) return -1;
-    // if (ma_engine_init(NULL, &engine) != MA_SUCCESS) return -2;
-    // if (ma_sound_init_from_file(&engine, "sfx/lose_sound.wav", 0, NULL, NULL, &sfx_lose_sound)) return -3;
-    // if (ma_sound_init_from_file(&engine, "sfx/line_clear.wav", 0, NULL, NULL, &sfx_line_clear)) return -4;
+    ma_result result;
+    
+    // sound engine initialization
+    result = ma_engine_init(NULL, &engine);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize sound engine\n";
+        return result;
+    }
+
+    // ma_sound sfx_click;
+    // ma_sound sfx_switch_piece;
+    // ma_sound sfx_place_piece;
+    // ma_sound sfx_line_clear;
+    // ma_sound sfx_lose;
+
+    // bgm menu initialization
+    result = ma_sound_init_from_file(&engine, "bgm/menu.wav", 0, NULL, NULL, &bgm_menu);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize menu bgm\n";
+        return result;
+    }
+
+    // sets bgm to loop
+    ma_sound_set_looping(&bgm_menu, true);
+
+    // sfx click initalization
+    result = ma_sound_init_from_file(&engine, "sfx/single_click.wav", 0, NULL, NULL, &sfx_click);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize click sfx\n";
+        return result;
+    }
+
+    // sfx switch piece initialization
+    result = ma_sound_init_from_file(&engine, "sfx/switch_piece.wav", 0, NULL, NULL, &sfx_switch_piece);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize switch piece sfx\n";
+        return result;
+    }
+
+    // sfx lose initialization
+    result = ma_sound_init_from_file(&engine, "sfx/lose_sound.wav", 0, NULL, NULL, &sfx_lose);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize lose sound sfx\n";
+        return result;
+    }
+
+    // sfx place piece initialization
+    result = ma_sound_init_from_file(&engine, "sfx/place_piece.wav", 0, NULL, NULL, &sfx_place_piece);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize place piece sfx\n";
+        return result;
+    }
+
+    // sfx line clear initialization
+    result = ma_sound_init_from_file(&engine, "sfx/line_clear.wav", 0, NULL, NULL, &sfx_line_clear);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize line clear sfx\n";
+        return result;
+    }
 
     // spy karakter unicode kyk ╝ bisa ngeprint di terminal
     SetConsoleOutputCP(CP_UTF8);
@@ -1568,7 +1650,17 @@ int main()
         else if (page == EXIT) break;
     }
     
-    // ma_engine_uninit(&engine);
+    // frees sounds from memory
+    ma_sound_uninit(&bgm_menu);
+    ma_sound_uninit(&sfx_click);
+    ma_sound_uninit(&sfx_line_clear);
+    ma_sound_uninit(&sfx_lose);
+    ma_sound_uninit(&sfx_place_piece);
+    ma_sound_uninit(&sfx_switch_piece);
+
+    // frees the sound engine
+    ma_engine_uninit(&engine);
+
     showCursor();
     return 0;
 }
