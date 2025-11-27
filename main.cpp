@@ -27,6 +27,7 @@ using namespace std;
 // music
 ma_engine engine;
 ma_sound bgm_menu;
+ma_sound bgm_classic_game;
 ma_sound sfx_click;
 ma_sound sfx_switch_piece;
 ma_sound sfx_place_piece;
@@ -1411,6 +1412,8 @@ void loseGame(const vector<vector<Cell>> board, int score) {
 int classic(int uid = 0) {
     hideCursor();
 
+    ma_sound_start(&bgm_classic_game);
+
     int rows = 8, cols = 8;
     // array[row][column]
     vector<vector<Cell>> board(rows, vector<Cell>(cols));
@@ -1532,6 +1535,8 @@ int classic(int uid = 0) {
             int isplaceable = piecesArePlaceable(board, pieces_list);
             if (!isplaceable) {
                 loseGame(board, score);
+                ma_sound_stop(&bgm_classic_game);
+                exitPage();
                 return 0;
             }
 
@@ -1543,8 +1548,7 @@ int classic(int uid = 0) {
     }
 
     cout << string(TXT_RESET);
-
-    page = MENU; // TEMP
+    exitPage();
     return 0;
 }
 
@@ -1589,9 +1593,16 @@ int main()
         cout << "Failed to initialize menu bgm\n";
         return result;
     }
-
     // sets bgm to loop
     ma_sound_set_looping(&bgm_menu, true);
+
+    // bgm classic game initialization
+    result = ma_sound_init_from_file(&engine, "bgm/sink_into_oblivion.mp3", 0, NULL, NULL, &bgm_classic_game);
+    if (result != MA_SUCCESS) {
+        cout << "Failed to initialize classic game bgm\n";
+        return result;
+    }
+    ma_sound_set_looping(&bgm_classic_game, true);
 
     // sfx click initalization
     result = ma_sound_init_from_file(&engine, "sfx/single_click.wav", 0, NULL, NULL, &sfx_click);
@@ -1601,7 +1612,7 @@ int main()
     }
 
     // sfx switch piece initialization
-    result = ma_sound_init_from_file(&engine, "sfx/switch_piece.wav", 0, NULL, NULL, &sfx_switch_piece);
+    result = ma_sound_init_from_file(&engine, "sfx/switch_piece.mp3", 0, NULL, NULL, &sfx_switch_piece);
     if (result != MA_SUCCESS) {
         cout << "Failed to initialize switch piece sfx\n";
         return result;
@@ -1652,6 +1663,7 @@ int main()
     
     // frees sounds from memory
     ma_sound_uninit(&bgm_menu);
+    ma_sound_uninit(&bgm_classic_game);
     ma_sound_uninit(&sfx_click);
     ma_sound_uninit(&sfx_line_clear);
     ma_sound_uninit(&sfx_lose);
